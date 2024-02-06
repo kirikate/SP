@@ -1,0 +1,5 @@
+desc/asc(default)
+-d -- datetime of creation
+-s -- size
+-a -- alphabet
+-l -- namelength
