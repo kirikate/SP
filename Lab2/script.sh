@@ -8,26 +8,79 @@ function getsize(){
 	then
     	return ${BASH_REMATCH[1]}
 	else
-    	echo "unable to parse string $res"
-    	exit 1
+		echo "unable to parse string $res"
+		exit 1
 	fi
 
 }
 
 function sizeComparator(){
-	testA=0
-	testB=0
+	local testA=0
+	local testB=0
 	
 	getsize $1
-	size1=$?
+	local size1=$?
 	getsize $2
-	size2=$?
-		
+	local size2=$?
+	echo "size1 = $size1 ; size2 = $size2"
+	
+	if ((size1 == size2))
+	then
+		echo "equal length"
+		return 1
+	fi
+	
+	(( size1 < size2 )) || testA=1
+	[ "$3" = "desc" ] || testB=1
+	
+	if [ "$testA" -ne "$testB" ]
+	then
+		return 1
+	else
+		return 0
+	fi
+}
+
+function getdate(){
+	local res=$(stat "$1")
+	# echo "res = $res arg=$1"
+	
+	if [[ "$res" =~ ([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}) ]];
+	then
+		retval=${BASH_REMATCH[1]}
+	else
+		echo "can't parse date of $1"
+	fi
+}
+
+function dateComparator(){
+	local testA=0
+	local testB=0
+	
+	getdate $1
+	local date1=$retval
+	getdate $2
+	local date2=$retval
+	
+	if [ "$date1" = "$date2" ];
+	then
+		return 1
+	fi
+	
+	[[ "$date1" < "$date2" ]] || testA=1
+	[ "$3" = "desc" ] || testB=1
+	
+	if [ "$testA" -ne "$testB" ]
+	then
+		return 1
+	else
+		return 0
+	fi
 }
 
 function alphabetComparator(){
-	testA=0
-	testB=0
+	local testA=0
+	local testB=0
 	[[ "$1" < "$2" ]] || testA=1
 	[ "$3" = "desc" ] || testB=1
 	
@@ -40,8 +93,8 @@ function alphabetComparator(){
 }
 
 function namelengthComparator(){
-	testA=0
-	testB=0
+	local testA=0
+	local testB=0
 	echo "length of $1 = ${#1} length of $2 = ${#2}"
 	if ((${#1} == ${#2}))
 	then
@@ -63,6 +116,25 @@ function namelengthComparator(){
 # 1 - comparator
 # 2 - desc/asc
 
+function random(){
+	local arraysize=${#filesarr[@]}
+	local randcount
+	((randcount = arraysize * 2 ))
+	echo "count = $randcount"
+	for ((i=0; i < randcount; ++i))
+	do
+		local i1
+		((i1=$RANDOM % arraysize))
+		local i2
+		((i2=$RANDOM % arraysize))
+		echo "i1= $i1 i2=$i2"
+		local tmp=${filesarr[i1]}
+		filesarr[$i1]=${filesarr[i2]}
+		filesarr[$i2]=$tmp
+	done
+}
+
+# comparator asc/desc
 function mysort(){
 	local comparator=$1
 	for ((i=0; i < ${#filesarr[@]}; ++i))
@@ -113,26 +185,9 @@ do
 	echo "file $file"
 done
 
-mysort namelengthComparator asc
-getsize script.sh
-echo "res = $?"
+random
 
-strname="ph7go04325r"
-if [[ $strname =~ ([0-9]+)r ]]; then
-	echo "success ${BASH_REMATCH[1]}"
-    strresult=${BASH_REMATCH[1]}
-else
-    echo "unable to parse string $strname"
-fi
-
-
-for file in ${filesarr[@]}
-do
-	echo "file $file"
-done
-
-
-while getopts ':a:d:l:s:h' opt; do
+while getopts ':a:d:l:s:hr:' opt; do
 	case "$opt" in
 	a)
 		if [ $OPTARG = "desc" ]
@@ -182,6 +237,9 @@ while getopts ':a:d:l:s:h' opt; do
 			exit 1
 		fi
 	;;
+	r)
+		
+	;;
 	h)
 		echo "help text"
 	;;
@@ -194,4 +252,10 @@ while getopts ':a:d:l:s:h' opt; do
 		exit 1
 	;;
   esac
+done
+
+for file in ${filesarr[@]}
+do
+	getdate "$file"
+	echo "file $file date = $retval"
 done
