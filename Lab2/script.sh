@@ -26,7 +26,7 @@ function sizeComparator(){
 	
 	if ((size1 == size2))
 	then
-		echo "equal length"
+		# echo "equal length"
 		return 1
 	fi
 	
@@ -98,7 +98,7 @@ function namelengthComparator(){
 	echo "length of $1 = ${#1} length of $2 = ${#2}"
 	if ((${#1} == ${#2}))
 	then
-		echo "equal length"
+		# echo "equal length"
 		return 1
 	fi
 	
@@ -119,6 +119,7 @@ function namelengthComparator(){
 function random(){
 	local arraysize=${#filesarr[@]}
 	local randcount
+	local i
 	((randcount = arraysize * 2 ))
 	echo "count = $randcount"
 	for ((i=0; i < randcount; ++i))
@@ -127,7 +128,7 @@ function random(){
 		((i1=$RANDOM % arraysize))
 		local i2
 		((i2=$RANDOM % arraysize))
-		echo "i1= $i1 i2=$i2"
+		# echo "i1= $i1 i2=$i2"
 		local tmp=${filesarr[i1]}
 		filesarr[$i1]=${filesarr[i2]}
 		filesarr[$i2]=$tmp
@@ -137,19 +138,33 @@ function random(){
 # comparator asc/desc
 function mysort(){
 	local comparator=$1
+	local i
+	local j
 	for ((i=0; i < ${#filesarr[@]}; ++i))
 	do
 		for ((j=0; j < ${#filesarr[@]} - i - 1; ++j ))
 		do
-			echo "i = $i j= $j"
+			# echo "i = $i j= $j"
 			if  $comparator ${filesarr[j]} ${filesarr[j+1]} $2
 			then
-				echo "swap"
+				# echo "swap"
 				local tmp=${filesarr[j]}
 				filesarr[$j]=${filesarr[j+1]}
 				filesarr[((j+1))]=$tmp
 			fi
 		done
+	done
+}
+
+function undoNumbers(){
+	for ((i = 0; i < ${#filesarr[@]}; ++i))
+	do
+		local filename=${filesarr[i]}
+		if [[ $filename =~ ^[0-9]{4}\.(.*) ]];
+		then
+			# echo "filename without number ${BASH_REMATCH[1]}"
+			mv "$filename" "${BASH_REMATCH[1]}"
+		fi
 	done
 }
 
@@ -163,10 +178,10 @@ function getFiles(){
 	grep ".*\..*" $tmpfile >> $tmpfile2
 	rm $tmpfile
 	
-	i=0
+	local i=0
 
 	while read line;do
-		if [ $line = $tmpfile ] || [ $line = $tmpfile2 ]
+		if [ $line = $tmpfile ] || [ $line = $tmpfile2 ] || [ $line = $scriptname ]
 		then
 			continue
 		fi
@@ -178,70 +193,87 @@ function getFiles(){
 	rm "$tmpfile2"
 }
 
+function showHelp(){
+	echo "-h -- help. Nothing more will be done"
+	echo "-d -- sort by datetime of last change"
+	echo "-s -- sort by size of file"
+	echo "-a -- sort by alphabet order"
+	echo "-l -- sort by namelength"
+	echo "-u -- undo numbers. Nothing more will be done"
+	echo "-p -- path to directory. If there is no path script will executes in current directory"
+	echo "bash script.sh -p 'path' [-d (desc/asc)]"
+}
+scriptname="$0"
+
 declare -a filesarr
-getFiles
-for file in ${filesarr[@]}
-do
-	echo "file $file"
-done
 
-random
+declare -a sortstack
 
-while getopts ':a:d:l:s:hr:' opt; do
+i=0
+
+while getopts ':hrua:d:l:s:p:' opt; do
 	case "$opt" in
 	a)
-		if [ $OPTARG = "desc" ]
+		if [ $OPTARG = "desc" ] || [ $OPTARG = "asc" ]
 		then
-			echo "a in desc"
-		elif [ $OPTARG = "asc" ]
-		then
-			echo "a in asc"
+			sortstack[$i]="mysort alphabetComparator $OPTARG"
+			((i=i+1))
 		else
-			echo "error"
 			exit 1
 		fi
 	;;
 	d)
-		if [ $OPTARG = "desc" ]
+		if [ $OPTARG = "desc" ] || [ $OPTARG = "asc" ]
 		then
-			echo "d in desc"
-		elif [ $OPTARG = "asc" ]
-		then
-			echo "d in asc"
+			sortstack[$i]="mysort dateComparator $OPTARG"
+			((i=i+1))
 		else
-			echo "error"
+			echo "error in arg of $opt . It can't be $OPTARG"
 			exit 1
 		fi
 	;;
 	l)
-		if [ $OPTARG = "desc" ]
+		if [ $OPTARG = "desc" ] || [ $OPTARG = "asc" ]
 		then
-			echo "l in desc"
-		elif [ $OPTARG = "asc" ]
-		then
-			echo "l in asc"
+			sortstack[$i]="mysort namelengthComparator $OPTARG"
+			((i=i+1))
 		else
-			echo "error"
+			echo "error in arg of $opt . It can't be $OPTARG"
 			exit 1
 		fi
 	;;
 	s)
-		if [ $OPTARG = "desc" ]
+		if [ $OPTARG = "desc" ] || [ $OPTARG = "asc" ]
 		then
-			echo "s in desc"
-		elif [ $OPTARG = "asc" ]
-		then
-			echo "s in asc"
+			sortstack[$i]="mysort sizeComparator $OPTARG"
+			((i=i+1))
 		else
-			echo "error"
+			echo "error in arg of $opt . It can't be $OPTARG"
 			exit 1
 		fi
 	;;
 	r)
-		
+		# echo "in random"
+		sortstack[$i]="random"
+		((i=i+1))
 	;;
 	h)
-		echo "help text"
+		showHelp
+		exit 0		
+	;;
+	u)
+		# echo " in undoNumbers case"
+		getFiles
+		undoNumbers
+		exit 0
+	;;
+	p)
+		cd "$OPTARG"
+		if (($? != 0));
+		then
+			echo "Error in path $OPTARG"
+			exit 1
+		fi
 	;;
 	:)
 		echo -e "Option requires an argument desc/asc"
@@ -252,10 +284,45 @@ while getopts ':a:d:l:s:hr:' opt; do
 		exit 1
 	;;
   esac
+  echo "option"
+done
+
+getFiles
+undoNumbers
+for file in ${filesarr[@]}
+do
+	echo "file $file"
+done
+
+for ((i=i-1; i >= 0; --i))
+do
+	eval "${sortstack[i]}"
 done
 
 for file in ${filesarr[@]}
 do
 	getdate "$file"
-	echo "file $file date = $retval"
+	getsize "$file"
+	echo "size=$? date = $retval file $file "
 done
+
+for ((i=0; i < ${#filesarr[@]}; ++i))
+do
+	declare number
+	file=${filesarr[i]}
+	if ((i <= 9));
+	then
+		number=000$i
+	elif ((i <= 99))
+	then
+		number=00$i
+	elif ((i <= 999))
+	then
+		number=0$i
+	else
+		number=$i
+	fi
+	mv $file "$number.$file"
+done
+
+
