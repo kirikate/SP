@@ -2,6 +2,13 @@
 
 _COLUMNS=60
 _ROWS=25
+_SEED=1
+
+function randomNumber(){
+	(( _SEED = _SEED * 1103515245 + 12345 ))
+	local res=$(( (_SEED / 65536) % 32768 ))
+	return $res
+}
 
 # value letter indent x y
 function smth(){
@@ -103,8 +110,14 @@ function printArrows(){
 }
 
 function printClocks(){
-	local x=$((RANDOM % (_COLUMNS - 16)))
-	local y=$((RANDOM % (_ROWS - 8)))
+	randomNumber 
+	local rand=$?
+	# echo " random result is     $rand     "
+	local x=$((rand % (_COLUMNS - 16)))
+	
+	randomNumber
+	local rand2=$?
+	local y=$((rand2 % (_ROWS - 8)))
 	# local x=15
 	# local y=8
 	tput cup $y $x
@@ -169,6 +182,7 @@ function printTime(){
 	printClocks $1 $2 $3
 }
 
+_SEED=$( date "+%s" )
 while true;do
 	clear
 	tput cup 0  0
