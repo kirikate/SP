@@ -171,11 +171,11 @@ function undoNumbers(){
 function getFiles(){
 	local tmpfile="$(($RANDOM+0))_$(($RANDOM+0)).txt"
 
-	$(ls >> $tmpfile)
+	$(ls -p >> $tmpfile)
 	
 	local tmpfile2="$(($RANDOM+0))_$(($RANDOM+0)).txt"
 	
-	grep ".*\..*" $tmpfile >> $tmpfile2
+	grep ".*[^/]$" $tmpfile >> $tmpfile2
 	rm $tmpfile
 	
 	local i=0
@@ -186,7 +186,7 @@ function getFiles(){
 			continue
 		fi
 		filesarr[$i]=$line
-		# echo "DEBUG i = $i line = $line filesarr[i] = ${filesarr[i]}"
+		echo "DEBUG i = $i line = $line filesarr[i] = ${filesarr[i]}"
 		((i=i+1))
 		# echo ${filesarr[*]}
 	done < "$tmpfile2"
@@ -278,7 +278,7 @@ while getopts ':hrua:d:l:s:p:' opt; do
 	:)
 		echo -e "Option requires an argument desc/asc"
 		exit 1
-	;;
+	;;	
 	?)
 		echo -e "There is no such option. Use -h to get help"
 		exit 1
