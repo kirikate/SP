@@ -7,6 +7,8 @@
 
 char** parseToWords(int* length_out, const char* text);
 
+char*** parseToMorseWords(int* length_out, int** lengthOfWords_out, const char* text);
+
 char** parseToMorseLetters(int* length_out, const char* text);
 
 void substr(const char* src, char* dst, int beg, int end);
